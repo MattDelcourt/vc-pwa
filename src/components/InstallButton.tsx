@@ -83,7 +83,7 @@ const InstallButton = () => {
             )}
 
             <div style={{ marginTop: '1rem' }}>
-              <button onClick={confirmInstall} disabled={!deferredPrompt}>
+              <button onClick={confirmInstall} >
                 Yes, Install
               </button>
               <button onClick={cancelInstall} style={{ marginLeft: '0.5rem' }}>

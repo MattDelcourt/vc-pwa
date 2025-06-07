@@ -62,7 +62,7 @@
 }
 
 .popup {
-  background: white;
+  background: rgba(139, 0, 0, 0.763);
   padding: 2rem;
   border-radius: 1rem;
   width: 90%;
