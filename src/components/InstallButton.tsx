@@ -5,15 +5,34 @@ const InstallButton = () => {
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault(); // Prevent default install prompt
-      setDeferredPrompt(e); // Save the event for later
-      setShowButton(true); // Show our install button
+    const checkInstallStatus = async () => {
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true;
+
+      // Hide button if running standalone
+      if (!isStandalone) {
+        console.log('App not installed or running in browser');
+        setShowButton(true);
+      } else {
+        console.log('App is installed (standalone mode)');
+        setShowButton(false);
+      }
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('beforeinstallprompt', (e: any) => {
+      e.preventDefault();
+      console.log('beforeinstallprompt fired');
+      setDeferredPrompt(e);
+      checkInstallStatus();
+    });
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    // Run on load in case app was uninstalled
+    checkInstallStatus();
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', () => {});
+    };
   }, []);
 
   const handleInstallClick = async () => {
@@ -24,10 +43,10 @@ const InstallButton = () => {
     console.log('Install result:', result.outcome);
 
     setDeferredPrompt(null);
-    setShowButton(false); // Hide button after prompt
+    setShowButton(false); // Hide after installation
   };
 
-  if (!showButton) return null;
+  if (!showButton || !deferredPrompt) return null;
 
   return (
     <button onClick={handleInstallClick} className="install-button">
