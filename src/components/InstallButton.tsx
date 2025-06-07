@@ -1,101 +1,70 @@
 import { useEffect, useState } from 'react';
 
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: any;
+  }
+}
+
 const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [isInstallSupported, setIsInstallSupported] = useState(true);
-
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
+    const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Detect if install prompt supported
-    if (!('onbeforeinstallprompt' in window)) {
-      setIsInstallSupported(false);
-    }
-
-    // Detect if app is already installed
-    const checkInstalled = () => {
-      const standalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (navigator as any).standalone === true;
-      setIsInstalled(standalone);
+    const handleAppInstalled = () => {
+      setInstalled(true);
     };
 
-    checkInstalled();
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Check iOS PWA mode
+    const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches || 
+        (window.navigator as any).standalone === true;
+    if (isStandalone) setInstalled(true);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
-  // Trigger actual install prompt
-  const handleInstallClick = async () => {
+  const handleClick = async () => {
+    const confirmMsg = installed
+      ? 'App appears to be already installed. Do you want to reinstall it?'
+      : 'Do you want to install this app?';
+
+    const confirmed = confirm(confirmMsg);
+    if (!confirmed) return;
+
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        console.log('App installed');
+      } else {
+        console.log('Install dismissed');
+      }
+      setDeferredPrompt(null); // Only prompt once
     } else {
-      alert(
-        isIOS && isSafari
-          ? 'To install on iOS, please tap Share → Add to Home Screen.'
-          : 'Install not supported on your device.'
-      );
+      alert('Install not supported or already installed. Try using the browser’s install option.');
     }
   };
 
-  // Reset install status for reinstalling
-  const handleReinstallClick = async () => {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const reg of registrations) {
-        await reg.unregister();
-      }
-
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-
-      localStorage.clear();
-      sessionStorage.clear();
-
-      if ('indexedDB' in window) {
-        const dbs = await indexedDB.databases();
-        for (const db of dbs) {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        }
-      }
-
-      alert('App reset. Please reload and install again.');
-    } catch (error) {
-      console.error('Error resetting app:', error);
-      alert('Failed to reset app. Check console.');
-    }
+  const getButtonLabel = () => {
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'iOS Install';
+    return installed ? 'Reinstall' : 'Install';
   };
-
-  let buttonText = 'Install';
-
-  if (isIOS && isSafari) {
-    buttonText = 'iOS Install';
-  } else if (isInstalled) {
-    buttonText = 'Reinstall';
-  } else if (!isInstallSupported) {
-    buttonText = 'Install';
-  }
-
-  const onClickHandler = isInstalled ? handleReinstallClick : handleInstallClick;
 
   return (
-    <button onClick={onClickHandler} className="install-button">
-      {buttonText}
+    <button className="install-button" onClick={handleClick}>
+      {getButtonLabel()}
     </button>
   );
 };
