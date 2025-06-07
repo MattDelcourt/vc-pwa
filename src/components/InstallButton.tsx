@@ -4,7 +4,6 @@ const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isInstallSupported, setIsInstallSupported] = useState(true);
-  const [showPopup, setShowPopup] = useState(false);
 
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -17,11 +16,12 @@ const InstallButton = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Detect if install is supported
+    // Detect if install prompt supported
     if (!('onbeforeinstallprompt' in window)) {
       setIsInstallSupported(false);
     }
 
+    // Detect if app is already installed
     const checkInstalled = () => {
       const standalone =
         window.matchMedia('(display-mode: standalone)').matches ||
@@ -36,57 +36,49 @@ const InstallButton = () => {
     };
   }, []);
 
-  const handleConfirm = async () => {
-    setShowPopup(false);
-
-    if (isInstalled) {
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          await reg.unregister();
-        }
-
-        if ('caches' in window) {
-          const cacheNames = await caches.keys();
-          await Promise.all(cacheNames.map(name => caches.delete(name)));
-        }
-
-        localStorage.clear();
-        sessionStorage.clear();
-
-        if ('indexedDB' in window) {
-          const dbs = await indexedDB.databases();
-          for (const db of dbs) {
-            if (db.name) indexedDB.deleteDatabase(db.name);
-          }
-        }
-
-        alert('App reset. Please reload and install again.');
-      } catch (error) {
-        console.error('Reinstall failed:', error);
-        alert('Failed to reset. Check console.');
-      }
+  // Trigger actual install prompt
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
     } else {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        await deferredPrompt.userChoice;
-        setDeferredPrompt(null);
-      } else {
-        alert(
-          isIOS && isSafari
-            ? 'To install on iOS, tap Share → Add to Home Screen.'
-            : 'Install not supported on this device.'
-        );
-      }
+      alert(
+        isIOS && isSafari
+          ? 'To install on iOS, please tap Share → Add to Home Screen.'
+          : 'Install not supported on your device.'
+      );
     }
   };
 
-  const handleClick = () => {
-    setShowPopup(true);
-  };
+  // Reset install status for reinstalling
+  const handleReinstallClick = async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.unregister();
+      }
 
-  const handleCancel = () => {
-    setShowPopup(false);
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      localStorage.clear();
+      sessionStorage.clear();
+
+      if ('indexedDB' in window) {
+        const dbs = await indexedDB.databases();
+        for (const db of dbs) {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        }
+      }
+
+      alert('App reset. Please reload and install again.');
+    } catch (error) {
+      console.error('Error resetting app:', error);
+      alert('Failed to reset app. Check console.');
+    }
   };
 
   let buttonText = 'Install';
@@ -95,61 +87,16 @@ const InstallButton = () => {
     buttonText = 'iOS Install';
   } else if (isInstalled) {
     buttonText = 'Reinstall';
+  } else if (!isInstallSupported) {
+    buttonText = 'Install';
   }
 
-  return (
-    <>
-      <button onClick={handleClick} className="install-button">
-        {buttonText}
-      </button>
+  const onClickHandler = isInstalled ? handleReinstallClick : handleInstallClick;
 
-      {showPopup && (
-        <div className="popup-overlay">
-          <div className="popup">
-            <h2>Confirm {buttonText}</h2>
-            {isInstalled && (
-              <p style={{ color: 'white' }}>
-                You've already installed this app. Reinstalling will reset all local data.
-              </p>
-            )}
-            {!isInstalled && (
-              <p style={{ color: 'white' }}>
-                This will install the app on your device.
-              </p>
-            )}
-            <div style={{ marginTop: '1rem' }}>
-              <button
-                onClick={handleConfirm}
-                style={{
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  marginRight: '1rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Confirm
-              </button>
-              <button
-                onClick={handleCancel}
-                style={{
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+  return (
+    <button onClick={onClickHandler} className="install-button">
+      {buttonText}
+    </button>
   );
 };
 
