@@ -3,6 +3,7 @@
     import { VitePWA } from 'vite-plugin-pwa';
 
     export default defineConfig({
+      base: "/vc-pwa",
       plugins: [
         react(),
         VitePWA({
@@ -28,6 +29,5 @@
             ]
           },
         }),
-      ],
-    base: "/vc-pwa"
+      ]
     });
