@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showPopup, setShowPopup] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isInstallSupported, setIsInstallSupported] = useState(true);
+  const [showPopup, setShowPopup] = useState(false);
 
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -17,76 +17,132 @@ const InstallButton = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    // Detect if install is supported
     if (!('onbeforeinstallprompt' in window)) {
       setIsInstallSupported(false);
     }
 
-    const checkInstallStatus = () => {
+    const checkInstalled = () => {
       const standalone =
         window.matchMedia('(display-mode: standalone)').matches ||
         (navigator as any).standalone === true;
       setIsInstalled(standalone);
     };
 
-    checkInstallStatus();
+    checkInstalled();
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
-  const handleInstallClick = () => {
+  const handleConfirm = async () => {
+    setShowPopup(false);
+
+    if (isInstalled) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+
+        localStorage.clear();
+        sessionStorage.clear();
+
+        if ('indexedDB' in window) {
+          const dbs = await indexedDB.databases();
+          for (const db of dbs) {
+            if (db.name) indexedDB.deleteDatabase(db.name);
+          }
+        }
+
+        alert('App reset. Please reload and install again.');
+      } catch (error) {
+        console.error('Reinstall failed:', error);
+        alert('Failed to reset. Check console.');
+      }
+    } else {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        setDeferredPrompt(null);
+      } else {
+        alert(
+          isIOS && isSafari
+            ? 'To install on iOS, tap Share → Add to Home Screen.'
+            : 'Install not supported on this device.'
+        );
+      }
+    }
+  };
+
+  const handleClick = () => {
     setShowPopup(true);
   };
 
-  const confirmInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-    }
+  const handleCancel = () => {
     setShowPopup(false);
   };
 
-  const cancelInstall = () => {
-    setShowPopup(false);
-  };
+  let buttonText = 'Install';
+
+  if (isIOS && isSafari) {
+    buttonText = 'iOS Install';
+  } else if (isInstalled) {
+    buttonText = 'Reinstall';
+  }
 
   return (
     <>
-      <button onClick={handleInstallClick} className="install-button">
-        Install App
+      <button onClick={handleClick} className="install-button">
+        {buttonText}
       </button>
 
       {showPopup && (
         <div className="popup-overlay">
           <div className="popup">
-            <p>Do you want to install this app?</p>
-
+            <h2>Confirm {buttonText}</h2>
             {isInstalled && (
-              <p style={{ color: 'red' }}>
-                It looks like you've already installed this app.
+              <p style={{ color: 'white' }}>
+                You've already installed this app. Reinstalling will reset all local data.
               </p>
             )}
-
-            {!isInstallSupported && (
-              <p style={{ color: 'orange' }}>
-                Your device or browser doesn’t support automatic installation.
+            {!isInstalled && (
+              <p style={{ color: 'white' }}>
+                This will install the app on your device.
               </p>
             )}
-
-            {isIOS && isSafari && (
-              <p>
-                On iOS, tap the <strong>Share</strong> button, then choose{" "}
-                <strong>"Add to Home Screen"</strong>.
-              </p>
-            )}
-
             <div style={{ marginTop: '1rem' }}>
-              <button onClick={confirmInstall} >
-                Yes, Install
+              <button
+                onClick={handleConfirm}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  marginRight: '1rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm
               </button>
-              <button onClick={cancelInstall} style={{ marginLeft: '0.5rem' }}>
+              <button
+                onClick={handleCancel}
+                style={{
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer'
+                }}
+              >
                 Cancel
               </button>
             </div>
@@ -98,3 +154,4 @@ const InstallButton = () => {
 };
 
 export default InstallButton;
+
