@@ -4,6 +4,10 @@ const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstallSupported, setIsInstallSupported] = useState(true);
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -12,6 +16,10 @@ const InstallButton = () => {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    if (!('onbeforeinstallprompt' in window)) {
+      setIsInstallSupported(false);
+    }
 
     const checkInstallStatus = () => {
       const standalone =
@@ -54,11 +62,26 @@ const InstallButton = () => {
         <div className="popup-overlay">
           <div className="popup">
             <p>Do you want to install this app?</p>
+
             {isInstalled && (
               <p style={{ color: 'red' }}>
                 It looks like you've already installed this app.
               </p>
             )}
+
+            {!isInstallSupported && (
+              <p style={{ color: 'orange' }}>
+                Your device or browser doesn’t support automatic installation.
+              </p>
+            )}
+
+            {isIOS && isSafari && (
+              <p>
+                On iOS, tap the <strong>Share</strong> button, then choose{" "}
+                <strong>"Add to Home Screen"</strong>.
+              </p>
+            )}
+
             <div style={{ marginTop: '1rem' }}>
               <button onClick={confirmInstall} disabled={!deferredPrompt}>
                 Yes, Install
