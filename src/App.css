@@ -49,25 +49,10 @@
   border-radius: 0.5rem;
   font-size: 1rem;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
-.popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.popup {
-  background: rgba(139, 0, 0, 0.763);
-  padding: 2rem;
-  border-radius: 1rem;
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+.install-button:hover {
+  background-color: #1d4ed8;
 }
 
