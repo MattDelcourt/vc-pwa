@@ -2,56 +2,75 @@ import { useEffect, useState } from 'react';
 
 const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showButton, setShowButton] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    const checkInstallStatus = async () => {
-      const isStandalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true;
-
-      // Hide button if running standalone
-      if (!isStandalone) {
-        console.log('App not installed or running in browser');
-        setShowButton(true);
-      } else {
-        console.log('App is installed (standalone mode)');
-        setShowButton(false);
-      }
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
     };
 
-    window.addEventListener('beforeinstallprompt', (e: any) => {
-      e.preventDefault();
-      console.log('beforeinstallprompt fired');
-      setDeferredPrompt(e);
-      checkInstallStatus();
-    });
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Run on load in case app was uninstalled
+    const checkInstallStatus = () => {
+      const standalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (navigator as any).standalone === true;
+      setIsInstalled(standalone);
+    };
+
     checkInstallStatus();
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', () => {});
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const result = await deferredPrompt.userChoice;
-    console.log('Install result:', result.outcome);
-
-    setDeferredPrompt(null);
-    setShowButton(false); // Hide after installation
+  const handleInstallClick = () => {
+    setShowPopup(true);
   };
 
-  if (!showButton || !deferredPrompt) return null;
+  const confirmInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+    }
+    setShowPopup(false);
+  };
+
+  const cancelInstall = () => {
+    setShowPopup(false);
+  };
 
   return (
-    <button onClick={handleInstallClick} className="install-button">
-      Install App
-    </button>
+    <>
+      <button onClick={handleInstallClick} className="install-button">
+        Install App
+      </button>
+
+      {showPopup && (
+        <div className="popup-overlay">
+          <div className="popup">
+            <p>Do you want to install this app?</p>
+            {isInstalled && (
+              <p style={{ color: 'red' }}>
+                It looks like you've already installed this app.
+              </p>
+            )}
+            <div style={{ marginTop: '1rem' }}>
+              <button onClick={confirmInstall} disabled={!deferredPrompt}>
+                Yes, Install
+              </button>
+              <button onClick={cancelInstall} style={{ marginLeft: '0.5rem' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
