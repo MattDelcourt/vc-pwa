@@ -1,33 +1,47 @@
 import { useEffect, useState } from 'react';
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
+
 declare global {
   interface WindowEventMap {
-    beforeinstallprompt: any;
+    beforeinstallprompt: BeforeInstallPromptEvent;
   }
 }
 
 const InstallButton = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+      console.log('beforeinstallprompt fired');
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     const handleAppInstalled = () => {
+      console.log('App installed');
       setInstalled(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('beforeinstallprompt', () => {
+      console.log('✅ beforeinstallprompt event fired');
+    });
 
-    // Check iOS PWA mode
+    // Check if app is running in standalone (PWA) mode
     const isStandalone =
-        window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as any).standalone === true;
-    if (isStandalone) setInstalled(true);
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+
+    if (isStandalone) {
+      console.log('Running in standalone mode');
+      setInstalled(true);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -37,23 +51,25 @@ const InstallButton = () => {
 
   const handleClick = async () => {
     const confirmMsg = installed
-      ? 'App appears to be already installed. Do you want to reinstall it?'
+      ? 'The app appears to be already installed. Do you want to reinstall it?'
       : 'Do you want to install this app?';
 
-    const confirmed = confirm(confirmMsg);
+    const confirmed = window.confirm(confirmMsg);
     if (!confirmed) return;
 
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome === 'accepted') {
-        console.log('App installed');
+      const result = await deferredPrompt.userChoice;
+      console.log('UserChoice:', result);
+      if (result.outcome === 'accepted') {
+        alert('App installed successfully!');
+        setInstalled(true);
       } else {
-        console.log('Install dismissed');
+        alert('Install was dismissed.');
       }
-      setDeferredPrompt(null); // Only prompt once
+      setDeferredPrompt(null); // Clean up
     } else {
-      alert('Install not supported or already installed. Try using the browser’s install option.');
+      alert('Install prompt not available. Try using your browser’s install option.');
     }
   };
 
@@ -70,4 +86,3 @@ const InstallButton = () => {
 };
 
 export default InstallButton;
-
