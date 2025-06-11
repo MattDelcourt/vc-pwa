@@ -12,26 +12,23 @@ declare global {
 }
 
 const InstallButton = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent>();
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
-      console.log('beforeinstallprompt fired');
+      alert('beforeinstallprompt fired');
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     const handleAppInstalled = () => {
-      console.log('App installed');
+      alert('App installed');
       setInstalled(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
-    window.addEventListener('beforeinstallprompt', () => {
-      console.log('✅ beforeinstallprompt event fired');
-    });
 
     // Check if app is running in standalone (PWA) mode
     const isStandalone =
@@ -39,7 +36,7 @@ const InstallButton = () => {
       (window.navigator as any).standalone === true;
 
     if (isStandalone) {
-      console.log('Running in standalone mode');
+      alert('Running in standalone mode');
       setInstalled(true);
     }
 
@@ -50,23 +47,28 @@ const InstallButton = () => {
   }, []);
 
   const handleClick = async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
+    const confirmMsg = installed
+      ? 'The app appears to be already installed. Do you want to reinstall it?'
+      : 'Do you want to install this app?';
 
-    const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      alert('App installed successfully!');
-      setInstalled(true);
+    const confirmed = window.confirm(confirmMsg);
+    if (!confirmed) return;
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      console.log('UserChoice:', result);
+      if (result.outcome === 'accepted') {
+        alert('App installed successfully!');
+        setInstalled(true);
+      } else {
+        alert('Install was dismissed.');
+      }
+      setDeferredPrompt(null); // Clean up
     } else {
-      alert('Install dismissed.');
+      (`alertInstall option is not currently available.\n\nIf you previously installed and removed the app, try reinstalling using your browser’s install menu (usually in the top-right ⋮ menu).`);
     }
-
-    setDeferredPrompt(undefined); // Reset
-  } else {
-    alert('Install not available. Try using the browser’s install option.');
-  }
-};
-
+  };
 
   const getButtonLabel = () => {
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'iOS Install';
