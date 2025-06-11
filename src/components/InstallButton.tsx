@@ -66,7 +66,7 @@ const InstallButton = () => {
       }
       setDeferredPrompt(null); // Clean up
     } else {
-      (`alertInstall option is not currently available.\n\nIf you previously installed and removed the app, try reinstalling using your browser’s install menu (usually in the top-right ⋮ menu).`);
+      alert(`Install option is not currently available.\n\nIf you previously installed and removed the app, try reinstalling using your browser’s install menu (usually in the top-right ⋮ menu).`);
     }
   };
 
