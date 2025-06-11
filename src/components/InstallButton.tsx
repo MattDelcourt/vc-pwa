@@ -12,7 +12,7 @@ declare global {
 }
 
 const InstallButton = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent>();
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ const InstallButton = () => {
       alert('Install dismissed.');
     }
 
-    setDeferredPrompt(null); // Reset
+    setDeferredPrompt(undefined); // Reset
   } else {
     alert('Install not available. Try using the browser’s install option.');
   }
