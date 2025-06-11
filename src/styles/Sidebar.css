@@ -1,6 +1,6 @@
 .sidebar {
   min-width: 180px;
-  background-color: var(--accent);
+  background-image: linear-gradient(to bottom right, var(--accent)55%, var(--light));
   padding: 1rem;
   display: flex;
   flex-direction: column;

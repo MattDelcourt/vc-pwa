@@ -2,7 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--accent);
+  background-image: linear-gradient(to bottom right, var(--accent)55%, var(--light));
   color: var(--text);
   padding: 0.1rem 5rem;
 }

@@ -2,8 +2,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import './styles/App.css';
-import './styles/colors.css';
+import './index.css';
 
 function App() {
   return (
