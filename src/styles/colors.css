@@ -1,0 +1,18 @@
+:root {
+  --primary: #d86923;
+  --dark: #2a4258;
+  --accent: #cf491f;
+  --light: #e68f28;
+  --text: #ffffff;
+}
+
+body {
+  background-color: var(--dark);
+  color: var(--text);
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+}
+
+.page {
+  padding: 2rem;
+}
