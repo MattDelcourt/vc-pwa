@@ -50,28 +50,23 @@ const InstallButton = () => {
   }, []);
 
   const handleClick = async () => {
-    const confirmMsg = installed
-      ? 'The app appears to be already installed. Do you want to reinstall it?'
-      : 'Do you want to install this app?';
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
 
-    const confirmed = window.confirm(confirmMsg);
-    if (!confirmed) return;
-
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const result = await deferredPrompt.userChoice;
-      console.log('UserChoice:', result);
-      if (result.outcome === 'accepted') {
-        alert('App installed successfully!');
-        setInstalled(true);
-      } else {
-        alert('Install was dismissed.');
-      }
-      setDeferredPrompt(null); // Clean up
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      alert('App installed successfully!');
+      setInstalled(true);
     } else {
-      alert('Install prompt not available. Try using your browser’s install option.');
+      alert('Install dismissed.');
     }
-  };
+
+    setDeferredPrompt(null); // Reset
+  } else {
+    alert('Install not available. Try using the browser’s install option.');
+  }
+};
+
 
   const getButtonLabel = () => {
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'iOS Install';
